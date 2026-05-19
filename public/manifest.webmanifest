@@ -1,0 +1,19 @@
+{
+  "name": "EasyUtils JSON",
+  "short_name": "JSON Utils",
+  "description": "Format, validate, minify, convert and inspect JSON locally in your browser.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#1f6f61",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["developer", "productivity", "utilities"]
+}

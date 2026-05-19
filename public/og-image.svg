@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f6f8fb"/>
+  <rect x="72" y="72" width="1056" height="486" rx="24" fill="#ffffff" stroke="#dce3eb"/>
+  <rect x="72" y="72" width="1056" height="132" rx="24" fill="#1f6f61"/>
+  <text x="120" y="152" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="54" font-weight="800" fill="#ffffff">EasyUtils JSON</text>
+  <text x="120" y="272" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="58" font-weight="800" fill="#172026">Free browser JSON formatter</text>
+  <text x="120" y="338" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="30" fill="#4d5e6d">Validate, minify, sort, convert, decode JWTs and inspect JSON locally.</text>
+  <rect x="120" y="400" width="170" height="58" rx="12" fill="#e8f6f1"/>
+  <text x="151" y="438" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="800" fill="#1f6f61">Private</text>
+  <rect x="314" y="400" width="188" height="58" rx="12" fill="#fff4da"/>
+  <text x="344" y="438" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="800" fill="#8a5a00">Fast tools</text>
+  <rect x="526" y="400" width="214" height="58" rx="12" fill="#fdecea"/>
+  <text x="556" y="438" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="800" fill="#b42318">Error lines</text>
+  <text x="910" y="486" font-family="Consolas, monospace" font-size="86" font-weight="700" fill="#1f6f61">{ }</text>
+</svg>

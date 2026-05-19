@@ -10,9 +10,12 @@ EasyUtils JSON is a pure frontend JSON web tool built with Vite, React and TypeS
 - Generate demo JSON from common JSON Schema fields
 - Escape and unescape JSON strings
 - Base64 encode and decode text
+- Decode JWT header and payload locally
+- Show JSON parse error line and column when available
+- Paste, clear and swap editor contents
 - Copy or download transformed output
 - Inspect basic JSON statistics
-- SEO metadata, `robots.txt`, `sitemap.xml` and structured data included
+- SEO metadata, Open Graph image, favicon, web app manifest, `robots.txt`, `sitemap.xml` and structured data included
 
 ## Development
 

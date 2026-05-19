@@ -10,6 +10,9 @@
     />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://web-easyutils-json.vercel.app/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1f6f61" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="EasyUtils JSON - Fast JSON Web Tools" />
     <meta
@@ -17,12 +20,15 @@
       content="A private, browser-based JSON toolbox for formatting, validation, minification, sorting, escaping and Base64 conversion."
     />
     <meta property="og:url" content="https://web-easyutils-json.vercel.app/" />
+    <meta property="og:image" content="https://web-easyutils-json.vercel.app/og-image.svg" />
+    <meta property="og:image:alt" content="EasyUtils JSON browser formatter and validator interface" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="EasyUtils JSON - Free JSON Formatter and Validator" />
     <meta
       name="twitter:description"
       content="Format, validate, minify and convert JSON instantly in your browser."
     />
+    <meta name="twitter:image" content="https://web-easyutils-json.vercel.app/og-image.svg" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -46,7 +52,48 @@
           "JSON Schema to demo JSON",
           "JSON escape and unescape",
           "Base64 encode and decode",
+          "JWT header and payload decode",
           "JSON statistics"
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is EasyUtils JSON free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. EasyUtils JSON is a free browser-based JSON formatter, validator and converter."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does my JSON leave the browser?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Formatting, validation, Base64 conversion and JWT decoding run locally in the browser."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can it show JSON parse error locations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. When the browser parser reports a position, EasyUtils JSON converts it into a line and column."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can it decode JWTs?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. It decodes JWT header and payload segments locally without verifying or uploading the token."
+            }
+          }
         ]
       }
     </script>

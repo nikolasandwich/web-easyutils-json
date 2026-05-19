@@ -5,9 +5,13 @@ import {
   Braces,
   CheckCircle2,
   Clipboard,
+  ClipboardPaste,
   Download,
+  Eraser,
   FileJson,
+  KeyRound,
   Lock,
+  Repeat2,
   Search,
   ShieldCheck,
   Sparkles,
@@ -50,7 +54,7 @@ type JsonSchema = {
 
 type ParseResult =
   | { ok: true; value: JsonValue; formatted: string; minified: string }
-  | { ok: false; message: string };
+  | { ok: false; message: string; position?: number; line?: number; column?: number };
 
 type Stats = {
   keys: number;
@@ -73,11 +77,49 @@ function parseJson(input: string): ParseResult {
       minified: JSON.stringify(value)
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid JSON';
+    const details = getJsonErrorDetails(input, message);
     return {
       ok: false,
-      message: error instanceof Error ? error.message : 'Invalid JSON'
+      message,
+      ...details
     };
   }
+}
+
+function getJsonErrorDetails(input: string, message: string) {
+  const positionMatch = message.match(/position (\d+)/i);
+  if (positionMatch) {
+    const position = Number(positionMatch[1]);
+    return { position, ...positionToLineColumn(input, position) };
+  }
+
+  const lineColumnMatch = message.match(/line (\d+) column (\d+)/i);
+  if (lineColumnMatch) {
+    return {
+      line: Number(lineColumnMatch[1]),
+      column: Number(lineColumnMatch[2])
+    };
+  }
+
+  return {};
+}
+
+function formatParseError(result: Extract<ParseResult, { ok: false }>) {
+  if (!result.line || /line \d+/i.test(result.message)) {
+    return result.message;
+  }
+
+  return `${result.message} at line ${result.line}, column ${result.column}`;
+}
+
+function positionToLineColumn(input: string, position: number) {
+  const before = input.slice(0, position);
+  const lines = before.split(/\r\n|\r|\n/);
+  return {
+    line: lines.length,
+    column: lines[lines.length - 1].length + 1
+  };
 }
 
 function sortKeys(value: JsonValue): JsonValue {
@@ -321,6 +363,24 @@ function decodeBase64(value: string) {
   return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  return decodeBase64(padded);
+}
+
+function decodeJwt(value: string) {
+  const token = value.trim();
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    throw new Error('JWT must include at least header and payload segments.');
+  }
+
+  const header = JSON.parse(decodeBase64Url(parts[0])) as JsonValue;
+  const payload = JSON.parse(decodeBase64Url(parts[1])) as JsonValue;
+  return JSON.stringify({ header, payload }, null, 2);
+}
+
 function bytes(value: string) {
   return new Blob([value]).size;
 }
@@ -336,7 +396,7 @@ function App() {
   const runJsonAction = (action: 'format' | 'minify' | 'sort' | 'schema' | 'demo') => {
     const result = parseJson(input);
     if (!result.ok) {
-      setNotice(`Invalid JSON: ${result.message}`);
+      setNotice(`Invalid JSON: ${formatParseError(result)}`);
       return;
     }
 
@@ -388,6 +448,37 @@ function App() {
     } catch {
       setNotice(`Base64 ${mode} failed. Check the input and try again.`);
     }
+  };
+
+  const decodeJwtInput = () => {
+    try {
+      setOutput(decodeJwt(input));
+      setNotice('JWT header and payload decoded locally');
+    } catch (error) {
+      setNotice(error instanceof Error ? `JWT decode failed: ${error.message}` : 'JWT decode failed');
+    }
+  };
+
+  const clearEditors = () => {
+    setInput('');
+    setOutput('');
+    setNotice('Input and output cleared');
+  };
+
+  const pasteInput = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setInput(text);
+      setNotice('Clipboard pasted into input');
+    } catch {
+      setNotice('Clipboard read failed. Paste into the input manually.');
+    }
+  };
+
+  const swapEditors = () => {
+    setInput(output);
+    setOutput(input);
+    setNotice('Input and output swapped');
   };
 
   const copyOutput = async () => {
@@ -442,8 +533,8 @@ function App() {
           <p className="eyebrow">Private, instant and Vercel-ready</p>
           <h1 id="page-title">Free JSON formatter, validator and converter</h1>
           <p>
-            Clean messy JSON, validate payloads, minify responses, sort keys and convert strings without
-            sending your data to a server.
+            Clean messy JSON, validate payloads with line and column hints, minify responses, sort keys,
+            decode JWTs and convert strings without sending your data to a server.
           </p>
         </div>
         <div className="hero-panel" aria-label="Tool status">
@@ -488,6 +579,22 @@ function App() {
           <button onClick={() => base64('decode')} title="Decode Base64">
             B64-
           </button>
+          <button onClick={decodeJwtInput} title="Decode JWT">
+            <KeyRound size={18} />
+            JWT
+          </button>
+          <button onClick={pasteInput} title="Paste from clipboard">
+            <ClipboardPaste size={18} />
+            Paste
+          </button>
+          <button onClick={swapEditors} title="Swap input and output">
+            <Repeat2 size={18} />
+            Swap
+          </button>
+          <button onClick={clearEditors} title="Clear input and output">
+            <Eraser size={18} />
+            Clear
+          </button>
           <button onClick={loadSample} title="Load sample JSON">
             Sample
           </button>
@@ -526,7 +633,11 @@ function App() {
         <aside className="diagnostics" aria-live="polite">
           <div className={parseResult.ok ? 'status ok' : 'status error'}>
             {parseResult.ok ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-            <span>{parseResult.ok ? 'Valid JSON' : parseResult.message}</span>
+            <span>
+              {parseResult.ok
+                ? 'Valid JSON'
+                : formatParseError(parseResult)}
+            </span>
           </div>
           <p>{notice}</p>
           {stats && (
@@ -565,7 +676,7 @@ function App() {
           <article>
             <Search size={22} />
             <h3>Validate and inspect</h3>
-            <p>Catch parse errors early and see useful counts for keys, objects, arrays and nesting depth.</p>
+            <p>Catch parse errors early with line and column hints plus counts for keys, objects and depth.</p>
           </article>
           <article>
             <Sparkles size={22} />
@@ -575,12 +686,17 @@ function App() {
           <article>
             <ShieldCheck size={22} />
             <h3>Local by design</h3>
-            <p>All operations run in the browser, which is better for private API responses and test data.</p>
+            <p>Formatting, conversions and JWT decoding run in the browser for private API responses and test data.</p>
           </article>
           <article>
             <Wand2 size={22} />
             <h3>Schema conversion</h3>
             <p>Infer a practical JSON Schema from sample data or generate demo JSON from common schema fields.</p>
+          </article>
+          <article>
+            <KeyRound size={22} />
+            <h3>JWT payload decode</h3>
+            <p>Decode JWT header and payload segments into readable JSON without uploading token contents.</p>
           </article>
         </div>
       </section>
@@ -594,6 +710,14 @@ function App() {
         <details>
           <summary>Does uploaded JSON leave my browser?</summary>
           <p>No. This static app runs transformations locally and does not upload JSON to a backend.</p>
+        </details>
+        <details>
+          <summary>Can it show where JSON is invalid?</summary>
+          <p>Yes. When the browser parser reports a character position, the tool converts it into a line and column.</p>
+        </details>
+        <details>
+          <summary>Can it decode JWT tokens?</summary>
+          <p>Yes. It decodes JWT header and payload segments locally. It does not verify signatures.</p>
         </details>
         <details>
           <summary>Can this be deployed on Vercel?</summary>
