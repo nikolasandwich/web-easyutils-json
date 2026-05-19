@@ -281,6 +281,7 @@ dd {
 }
 
 .feature-band,
+.references,
 .faq {
   padding: 3rem clamp(1rem, 4vw, 3rem);
 }
@@ -290,6 +291,7 @@ dd {
 }
 
 .feature-band h2,
+.references h2,
 .faq h2 {
   font-size: clamp(1.8rem, 4vw, 3.4rem);
   letter-spacing: 0;
@@ -315,9 +317,41 @@ article h3 {
 }
 
 article p,
+.reference-grid span,
 .faq p {
   color: #4d5e6d;
   line-height: 1.6;
+}
+
+.references {
+  background: #f8fafc;
+}
+
+.reference-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.reference-grid a {
+  background: #ffffff;
+  border: 1px solid #dce3eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.1rem;
+}
+
+.reference-grid a:hover {
+  border-color: #2f7d6f;
+}
+
+.reference-grid strong {
+  color: #172026;
+}
+
+.reference-grid span {
+  display: block;
 }
 
 .faq {

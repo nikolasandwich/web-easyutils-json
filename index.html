@@ -38,6 +38,12 @@
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Any",
         "description": "Free browser-based JSON formatter, validator, minifier, JSON Schema generator, demo JSON generator and converter.",
+        "sameAs": [
+          "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+          "https://json-schema.org/draft/2020-12",
+          "https://jwt.io/introduction/",
+          "https://developer.mozilla.org/docs/Web/API/Window/btoa"
+        ],
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -91,7 +97,23 @@
             "name": "Can it decode JWTs?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. It decodes JWT header and payload segments locally without verifying or uploading the token."
+              "text": "Yes. It decodes JWT header and payload segments locally without uploading the token. It does not verify signatures or prove that a token is trustworthy."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is the generated JSON Schema production-ready?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The generated JSON Schema is a practical starting point inferred from sample JSON. Review and refine it before using it as a full validation contract."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which external references are useful?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "MDN documents JSON and Base64 browser behavior, json-schema.org documents JSON Schema, and jwt.io explains JWT structure and verification concepts."
             }
           }
         ]

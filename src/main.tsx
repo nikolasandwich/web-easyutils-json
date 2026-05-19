@@ -524,6 +524,7 @@ function App() {
         <nav aria-label="Primary">
           <a href="#tool">Tool</a>
           <a href="#features">Features</a>
+          <a href="#references">Refs</a>
           <a href="#faq">FAQ</a>
         </nav>
       </header>
@@ -701,6 +702,31 @@ function App() {
         </div>
       </section>
 
+      <section className="references" id="references" aria-labelledby="references-title">
+        <div>
+          <p className="eyebrow">References</p>
+          <h2 id="references-title">Useful specs and docs</h2>
+        </div>
+        <div className="reference-grid">
+          <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON" target="_blank" rel="noreferrer">
+            <strong>JSON on MDN</strong>
+            <span>How JavaScript parses and serializes JSON data.</span>
+          </a>
+          <a href="https://json-schema.org/draft/2020-12" target="_blank" rel="noreferrer">
+            <strong>JSON Schema 2020-12</strong>
+            <span>The official draft used by the generated schema output.</span>
+          </a>
+          <a href="https://jwt.io/introduction/" target="_blank" rel="noreferrer">
+            <strong>JWT introduction</strong>
+            <span>What JWT header, payload and signature segments mean.</span>
+          </a>
+          <a href="https://developer.mozilla.org/docs/Web/API/Window/btoa" target="_blank" rel="noreferrer">
+            <strong>Base64 on MDN</strong>
+            <span>Browser Base64 encoding details and binary string behavior.</span>
+          </a>
+        </div>
+      </section>
+
       <section className="faq" id="faq" aria-labelledby="faq-title">
         <h2 id="faq-title">JSON tool FAQ</h2>
         <details>
@@ -717,7 +743,10 @@ function App() {
         </details>
         <details>
           <summary>Can it decode JWT tokens?</summary>
-          <p>Yes. It decodes JWT header and payload segments locally. It does not verify signatures.</p>
+          <p>
+            Yes. It decodes JWT header and payload segments locally. It does not verify signatures or prove
+            that a token is trustworthy.
+          </p>
         </details>
         <details>
           <summary>Can this be deployed on Vercel?</summary>
@@ -727,7 +756,14 @@ function App() {
           <summary>Can it convert JSON to JSON Schema?</summary>
           <p>
             Yes. It infers object properties, required fields, arrays, union types and common string formats from
-            sample JSON.
+            sample JSON. Treat the result as a practical starting point rather than a complete validation contract.
+          </p>
+        </details>
+        <details>
+          <summary>Which external references are useful?</summary>
+          <p>
+            MDN is useful for JSON and Base64 browser behavior, json-schema.org documents JSON Schema, and jwt.io
+            explains JWT structure and verification concepts.
           </p>
         </details>
         <details>
