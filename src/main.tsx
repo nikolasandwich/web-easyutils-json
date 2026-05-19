@@ -1,0 +1,625 @@
+import { StrictMode, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  AlertCircle,
+  Braces,
+  CheckCircle2,
+  Clipboard,
+  Download,
+  FileJson,
+  Lock,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Wand2,
+  WrapText
+} from 'lucide-react';
+import './styles.css';
+
+const sampleJson = `{
+  "name": "EasyUtils JSON",
+  "purpose": "Format, validate, minify and convert JSON in the browser",
+  "features": ["format", "validate", "minify", "sort keys", "escape", "base64"],
+  "private": true
+}`;
+
+const binaryChunkSize = 0x8000;
+
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+
+type JsonSchema = {
+  $schema?: string;
+  title?: string;
+  type?: string | string[];
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  items?: JsonSchema;
+  enum?: JsonValue[];
+  const?: JsonValue;
+  default?: JsonValue;
+  examples?: JsonValue[];
+  format?: string;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  minItems?: number;
+  anyOf?: JsonSchema[];
+  oneOf?: JsonSchema[];
+  allOf?: JsonSchema[];
+};
+
+type ParseResult =
+  | { ok: true; value: JsonValue; formatted: string; minified: string }
+  | { ok: false; message: string };
+
+type Stats = {
+  keys: number;
+  arrays: number;
+  objects: number;
+  strings: number;
+  numbers: number;
+  booleans: number;
+  nulls: number;
+  depth: number;
+};
+
+function parseJson(input: string): ParseResult {
+  try {
+    const value = JSON.parse(input) as JsonValue;
+    return {
+      ok: true,
+      value,
+      formatted: JSON.stringify(value, null, 2),
+      minified: JSON.stringify(value)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : 'Invalid JSON'
+    };
+  }
+}
+
+function sortKeys(value: JsonValue): JsonValue {
+  if (Array.isArray(value)) {
+    return value.map(sortKeys);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort((a, b) => a.localeCompare(b))
+      .reduce<Record<string, JsonValue>>((result, key) => {
+        result[key] = sortKeys(value[key]);
+        return result;
+      }, {});
+  }
+
+  return value;
+}
+
+function schemaType(value: JsonValue) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (Number.isInteger(value)) return 'integer';
+  return typeof value;
+}
+
+function uniqueTypes(types: Array<string | string[] | undefined>) {
+  const result = new Set<string>();
+  types.forEach((type) => {
+    if (Array.isArray(type)) {
+      type.forEach((item) => result.add(item));
+    } else if (type) {
+      result.add(type);
+    }
+  });
+
+  const next = [...result];
+  if (next.length === 0) return undefined;
+  return next.length === 1 ? next[0] : next;
+}
+
+function detectStringFormat(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) && !Number.isNaN(Date.parse(value))) {
+    return 'date-time';
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return 'date';
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'email';
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? 'uri' : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function inferSchema(value: JsonValue, isRoot = true): JsonSchema {
+  if (Array.isArray(value)) {
+    return {
+      ...(isRoot ? { $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Generated schema' } : {}),
+      type: 'array',
+      items: value.length > 0 ? mergeSchemas(value.map((item) => inferSchema(item, false))) : {}
+    };
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value);
+    return {
+      ...(isRoot ? { $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Generated schema' } : {}),
+      type: 'object',
+      properties: entries.reduce<Record<string, JsonSchema>>((properties, [key, item]) => {
+        properties[key] = inferSchema(item, false);
+        return properties;
+      }, {}),
+      required: entries.map(([key]) => key)
+    };
+  }
+
+  const type = schemaType(value);
+  const schema: JsonSchema = {
+    ...(isRoot ? { $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Generated schema' } : {}),
+    type
+  };
+
+  if (typeof value === 'string') {
+    const format = detectStringFormat(value);
+    if (format) schema.format = format;
+  }
+
+  return schema;
+}
+
+function mergeSchemas(schemas: JsonSchema[]): JsonSchema {
+  if (schemas.length === 0) return {};
+  if (schemas.length === 1) return schemas[0];
+
+  const type = uniqueTypes(schemas.map((schema) => schema.type));
+  const merged: JsonSchema = type ? { type } : {};
+  const typeList = type ? (Array.isArray(type) ? type : [type]) : [];
+
+  if (typeList.includes('object')) {
+    const objectSchemas = schemas.filter((schema) =>
+      Array.isArray(schema.type) ? schema.type.includes('object') : schema.type === 'object'
+    );
+    const allKeys = new Set<string>();
+    objectSchemas.forEach((schema) => Object.keys(schema.properties ?? {}).forEach((key) => allKeys.add(key)));
+
+    merged.properties = {};
+    allKeys.forEach((key) => {
+      const propertySchemas = objectSchemas
+        .map((schema) => schema.properties?.[key])
+        .filter((schema): schema is JsonSchema => Boolean(schema));
+      merged.properties![key] = mergeSchemas(propertySchemas);
+    });
+
+    merged.required = [...allKeys].filter((key) =>
+      objectSchemas.every((schema) => Object.prototype.hasOwnProperty.call(schema.properties ?? {}, key))
+    );
+  }
+
+  if (typeList.includes('array')) {
+    const itemSchemas = schemas
+      .map((schema) => schema.items)
+      .filter((schema): schema is JsonSchema => Boolean(schema));
+    if (itemSchemas.length > 0) merged.items = mergeSchemas(itemSchemas);
+  }
+
+  const formats = [...new Set(schemas.map((schema) => schema.format).filter(Boolean))];
+  if (formats.length === 1) merged.format = formats[0];
+
+  return merged;
+}
+
+function firstSchemaOption(schema: JsonSchema) {
+  return schema.default ?? schema.examples?.[0] ?? schema.const ?? schema.enum?.[0];
+}
+
+function schemaToDemo(schema: JsonSchema): JsonValue {
+  const preferred = firstSchemaOption(schema);
+  if (preferred !== undefined) return preferred;
+
+  if (schema.allOf?.length) {
+    const objects = schema.allOf.map(schemaToDemo).filter((value) => value && typeof value === 'object' && !Array.isArray(value));
+    return Object.assign({}, ...objects) as JsonValue;
+  }
+
+  const option = schema.oneOf?.[0] ?? schema.anyOf?.[0];
+  if (option) return schemaToDemo(option);
+
+  const type = Array.isArray(schema.type) ? schema.type.find((item) => item !== 'null') ?? schema.type[0] : schema.type;
+
+  if (type === 'object' || schema.properties) {
+    return Object.entries(schema.properties ?? {}).reduce<Record<string, JsonValue>>((result, [key, property]) => {
+      result[key] = schemaToDemo(property);
+      return result;
+    }, {});
+  }
+
+  if (type === 'array') {
+    const count = Math.max(1, Math.min(schema.minItems ?? 1, 3));
+    return Array.from({ length: count }, () => schemaToDemo(schema.items ?? {}));
+  }
+
+  if (type === 'integer') return Math.trunc(schema.minimum ?? schema.maximum ?? 1);
+  if (type === 'number') return schema.minimum ?? schema.maximum ?? 1.5;
+  if (type === 'boolean') return true;
+  if (type === 'null') return null;
+
+  if (type === 'string' || schema.format || schema.minLength) {
+    if (schema.format === 'email') return 'user@example.com';
+    if (schema.format === 'uri') return 'https://example.com';
+    if (schema.format === 'date') return '2026-05-19';
+    if (schema.format === 'date-time') return '2026-05-19T00:00:00.000Z';
+    return 'string'.padEnd(Math.max(schema.minLength ?? 6, 1), 'x');
+  }
+
+  return {};
+}
+
+function collectStats(value: JsonValue, depth = 1): Stats {
+  const stats: Stats = {
+    keys: 0,
+    arrays: 0,
+    objects: 0,
+    strings: 0,
+    numbers: 0,
+    booleans: 0,
+    nulls: 0,
+    depth
+  };
+
+  const merge = (next: Stats) => {
+    stats.keys += next.keys;
+    stats.arrays += next.arrays;
+    stats.objects += next.objects;
+    stats.strings += next.strings;
+    stats.numbers += next.numbers;
+    stats.booleans += next.booleans;
+    stats.nulls += next.nulls;
+    stats.depth = Math.max(stats.depth, next.depth);
+  };
+
+  if (value === null) {
+    stats.nulls += 1;
+    return stats;
+  }
+
+  if (Array.isArray(value)) {
+    stats.arrays += 1;
+    value.forEach((item) => merge(collectStats(item, depth + 1)));
+    return stats;
+  }
+
+  if (typeof value === 'object') {
+    stats.objects += 1;
+    stats.keys += Object.keys(value).length;
+    Object.values(value).forEach((item) => merge(collectStats(item, depth + 1)));
+    return stats;
+  }
+
+  if (typeof value === 'string') stats.strings += 1;
+  if (typeof value === 'number') stats.numbers += 1;
+  if (typeof value === 'boolean') stats.booleans += 1;
+
+  return stats;
+}
+
+function encodeBase64(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const chunks: string[] = [];
+  for (let index = 0; index < bytes.length; index += binaryChunkSize) {
+    chunks.push(String.fromCharCode(...bytes.subarray(index, index + binaryChunkSize)));
+  }
+  const binary = chunks.join('');
+  return btoa(binary);
+}
+
+function decodeBase64(value: string) {
+  const binary = atob(value);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+}
+
+function bytes(value: string) {
+  return new Blob([value]).size;
+}
+
+function App() {
+  const [input, setInput] = useState(sampleJson);
+  const [output, setOutput] = useState(() => JSON.stringify(JSON.parse(sampleJson), null, 2));
+  const [notice, setNotice] = useState('Sample JSON loaded');
+
+  const parseResult = useMemo(() => parseJson(input), [input]);
+  const stats = useMemo(() => (parseResult.ok ? collectStats(parseResult.value) : null), [parseResult]);
+
+  const runJsonAction = (action: 'format' | 'minify' | 'sort' | 'schema' | 'demo') => {
+    const result = parseJson(input);
+    if (!result.ok) {
+      setNotice(`Invalid JSON: ${result.message}`);
+      return;
+    }
+
+    if (action === 'format') {
+      setOutput(result.formatted);
+      setNotice('JSON formatted with 2-space indentation');
+    }
+
+    if (action === 'minify') {
+      setOutput(result.minified);
+      setNotice('Whitespace removed from JSON');
+    }
+
+    if (action === 'sort') {
+      setOutput(JSON.stringify(sortKeys(result.value), null, 2));
+      setNotice('Object keys sorted alphabetically');
+    }
+
+    if (action === 'schema') {
+      setOutput(JSON.stringify(inferSchema(result.value), null, 2));
+      setNotice('JSON Schema generated from the sample input');
+    }
+
+    if (action === 'demo') {
+      setOutput(JSON.stringify(schemaToDemo(result.value as JsonSchema), null, 2));
+      setNotice('Demo JSON generated from the schema input');
+    }
+  };
+
+  const escapeInput = () => {
+    setOutput(JSON.stringify(input));
+    setNotice('Input escaped as a JSON string');
+  };
+
+  const unescapeInput = () => {
+    try {
+      const value = JSON.parse(input);
+      setOutput(typeof value === 'string' ? value : JSON.stringify(value, null, 2));
+      setNotice('JSON string unescaped');
+    } catch (error) {
+      setNotice(error instanceof Error ? `Cannot unescape: ${error.message}` : 'Cannot unescape input');
+    }
+  };
+
+  const base64 = (mode: 'encode' | 'decode') => {
+    try {
+      setOutput(mode === 'encode' ? encodeBase64(input) : decodeBase64(input.trim()));
+      setNotice(mode === 'encode' ? 'Input encoded to Base64' : 'Base64 decoded');
+    } catch {
+      setNotice(`Base64 ${mode} failed. Check the input and try again.`);
+    }
+  };
+
+  const copyOutput = async () => {
+    try {
+      await navigator.clipboard.writeText(output);
+      setNotice('Output copied to clipboard');
+    } catch {
+      setNotice('Clipboard access failed. Select the output and copy it manually.');
+    }
+  };
+
+  const downloadOutput = () => {
+    const blob = new Blob([output], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'easyutils-json-output.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setNotice('Output downloaded');
+  };
+
+  const loadSample = () => {
+    setInput(sampleJson);
+    setOutput(JSON.stringify(JSON.parse(sampleJson), null, 2));
+    setNotice('Sample JSON loaded');
+  };
+
+  return (
+    <main>
+      <header className="site-header">
+        <a className="brand" href="/" aria-label="EasyUtils JSON home">
+          <span className="brand-mark">
+            <Braces size={24} />
+          </span>
+          <span>
+            <strong>EasyUtils JSON</strong>
+            <small>Browser JSON toolbox</small>
+          </span>
+        </a>
+        <nav aria-label="Primary">
+          <a href="#tool">Tool</a>
+          <a href="#features">Features</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+      </header>
+
+      <section className="hero" aria-labelledby="page-title">
+        <div className="hero-copy">
+          <p className="eyebrow">Private, instant and Vercel-ready</p>
+          <h1 id="page-title">Free JSON formatter, validator and converter</h1>
+          <p>
+            Clean messy JSON, validate payloads, minify responses, sort keys and convert strings without
+            sending your data to a server.
+          </p>
+        </div>
+        <div className="hero-panel" aria-label="Tool status">
+          <ShieldCheck size={24} />
+          <span>All transformations run locally in your browser.</span>
+        </div>
+      </section>
+
+      <section className="workspace" id="tool" aria-label="JSON tool">
+        <div className="toolbar" aria-label="JSON actions">
+          <button onClick={() => runJsonAction('format')} title="Format JSON">
+            <Sparkles size={18} />
+            Format
+          </button>
+          <button onClick={() => runJsonAction('minify')} title="Minify JSON">
+            <WrapText size={18} />
+            Minify
+          </button>
+          <button onClick={() => runJsonAction('sort')} title="Sort JSON keys">
+            <FileJson size={18} />
+            Sort keys
+          </button>
+          <button onClick={() => runJsonAction('schema')} title="Generate JSON Schema">
+            <Wand2 size={18} />
+            JSON to Schema
+          </button>
+          <button onClick={() => runJsonAction('demo')} title="Generate demo JSON from schema">
+            <Braces size={18} />
+            Schema to JSON
+          </button>
+          <button onClick={escapeInput} title="Escape input">
+            <Lock size={18} />
+            Escape
+          </button>
+          <button onClick={unescapeInput} title="Unescape JSON string">
+            <Braces size={18} />
+            Unescape
+          </button>
+          <button onClick={() => base64('encode')} title="Encode Base64">
+            B64+
+          </button>
+          <button onClick={() => base64('decode')} title="Decode Base64">
+            B64-
+          </button>
+          <button onClick={loadSample} title="Load sample JSON">
+            Sample
+          </button>
+        </div>
+
+        <div className="editor-grid">
+          <section className="editor-pane" aria-labelledby="input-label">
+            <div className="pane-header">
+              <h2 id="input-label">Input</h2>
+              <span>{bytes(input).toLocaleString()} bytes</span>
+            </div>
+            <textarea
+              spellCheck="false"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              aria-label="JSON input"
+            />
+          </section>
+
+          <section className="editor-pane" aria-labelledby="output-label">
+            <div className="pane-header">
+              <h2 id="output-label">Output</h2>
+              <div className="icon-actions">
+                <button onClick={copyOutput} title="Copy output" aria-label="Copy output">
+                  <Clipboard size={18} />
+                </button>
+                <button onClick={downloadOutput} title="Download output" aria-label="Download output">
+                  <Download size={18} />
+                </button>
+              </div>
+            </div>
+            <textarea spellCheck="false" value={output} onChange={(event) => setOutput(event.target.value)} aria-label="JSON output" />
+          </section>
+        </div>
+
+        <aside className="diagnostics" aria-live="polite">
+          <div className={parseResult.ok ? 'status ok' : 'status error'}>
+            {parseResult.ok ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+            <span>{parseResult.ok ? 'Valid JSON' : parseResult.message}</span>
+          </div>
+          <p>{notice}</p>
+          {stats && (
+            <dl>
+              <div>
+                <dt>Keys</dt>
+                <dd>{stats.keys}</dd>
+              </div>
+              <div>
+                <dt>Objects</dt>
+                <dd>{stats.objects}</dd>
+              </div>
+              <div>
+                <dt>Arrays</dt>
+                <dd>{stats.arrays}</dd>
+              </div>
+              <div>
+                <dt>Depth</dt>
+                <dd>{stats.depth}</dd>
+              </div>
+              <div>
+                <dt>Values</dt>
+                <dd>{stats.strings + stats.numbers + stats.booleans + stats.nulls}</dd>
+              </div>
+            </dl>
+          )}
+        </aside>
+      </section>
+
+      <section className="feature-band" id="features" aria-labelledby="features-title">
+        <div>
+          <p className="eyebrow">Common JSON utilities</p>
+          <h2 id="features-title">Built for quick developer workflows</h2>
+        </div>
+        <div className="feature-grid">
+          <article>
+            <Search size={22} />
+            <h3>Validate and inspect</h3>
+            <p>Catch parse errors early and see useful counts for keys, objects, arrays and nesting depth.</p>
+          </article>
+          <article>
+            <Sparkles size={22} />
+            <h3>Format and minify</h3>
+            <p>Turn pasted payloads into readable JSON or compact output for transport and storage.</p>
+          </article>
+          <article>
+            <ShieldCheck size={22} />
+            <h3>Local by design</h3>
+            <p>All operations run in the browser, which is better for private API responses and test data.</p>
+          </article>
+          <article>
+            <Wand2 size={22} />
+            <h3>Schema conversion</h3>
+            <p>Infer a practical JSON Schema from sample data or generate demo JSON from common schema fields.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="faq" id="faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">JSON tool FAQ</h2>
+        <details>
+          <summary>Is this JSON formatter free?</summary>
+          <p>Yes. EasyUtils JSON is a free browser-based JSON formatter and validator.</p>
+        </details>
+        <details>
+          <summary>Does uploaded JSON leave my browser?</summary>
+          <p>No. This static app runs transformations locally and does not upload JSON to a backend.</p>
+        </details>
+        <details>
+          <summary>Can this be deployed on Vercel?</summary>
+          <p>Yes. The project builds to static files with Vite and can be deployed directly to Vercel.</p>
+        </details>
+        <details>
+          <summary>Can it convert JSON to JSON Schema?</summary>
+          <p>
+            Yes. It infers object properties, required fields, arrays, union types and common string formats from
+            sample JSON.
+          </p>
+        </details>
+        <details>
+          <summary>Can it create demo JSON from a JSON Schema?</summary>
+          <p>
+            Yes. It supports common schema fields including type, properties, items, enum, const, default,
+            examples and simple format hints.
+          </p>
+        </details>
+      </section>
+    </main>
+  );
+}
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
