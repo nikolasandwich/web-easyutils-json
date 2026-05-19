@@ -6,7 +6,7 @@
     <title>EasyUtils JSON - Free JSON Formatter, Validator, Minifier and Converter</title>
     <meta
       name="description"
-      content="Use EasyUtils JSON to format, validate, minify, sort, convert JSON to JSON Schema, generate demo JSON from schema and inspect JSON directly in your browser."
+      content="Use EasyUtils JSON to format, validate, minify, sort, query with JSONPath, convert JSON to JSON Schema, generate demo JSON from schema and inspect JSON directly in your browser."
     />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://json.easyutils.org/" />
@@ -17,7 +17,7 @@
     <meta property="og:title" content="EasyUtils JSON - Fast JSON Web Tools" />
     <meta
       property="og:description"
-      content="A private, browser-based JSON toolbox for formatting, validation, minification, sorting, escaping and Base64 conversion."
+      content="A private, browser-based JSON toolbox for formatting, validation, minification, JSONPath extraction, sorting, escaping and Base64 conversion."
     />
     <meta property="og:url" content="https://json.easyutils.org/" />
     <meta property="og:image" content="https://json.easyutils.org/og-image.svg" />
@@ -37,10 +37,11 @@
         "url": "https://json.easyutils.org/",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Any",
-        "description": "Free browser-based JSON formatter, validator, minifier, JSON Schema generator, demo JSON generator and converter.",
+        "description": "Free browser-based JSON formatter, validator, minifier, JSONPath extractor, JSON Schema generator, demo JSON generator and converter.",
         "sameAs": [
           "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
           "https://json-schema.org/draft/2020-12",
+          "https://www.rfc-editor.org/rfc/rfc9535.html",
           "https://jwt.io/introduction/",
           "https://developer.mozilla.org/docs/Web/API/Window/btoa"
         ],
@@ -53,6 +54,7 @@
           "JSON formatter",
           "JSON validator",
           "JSON minifier",
+          "JSONPath query and extraction",
           "JSON key sorter",
           "JSON to JSON Schema",
           "JSON Schema to demo JSON",
@@ -90,6 +92,14 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Yes. When the browser parser reports a position, EasyUtils JSON converts it into a line and column."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can it extract data with JSONPath?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Enter a JSONPath expression such as $.items[*].id or $.users[?(@.active === true)] and the output will contain the matching values."
             }
           },
           {

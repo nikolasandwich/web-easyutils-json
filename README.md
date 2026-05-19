@@ -5,6 +5,7 @@ EasyUtils JSON is a pure frontend JSON web tool built with Vite, React and TypeS
 ## Features
 
 - Format, validate and minify JSON
+- Extract data with JSONPath queries
 - Sort object keys alphabetically
 - Convert sample JSON to JSON Schema
 - Generate demo JSON from common JSON Schema fields

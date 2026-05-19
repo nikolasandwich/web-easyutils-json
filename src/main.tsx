@@ -1,5 +1,6 @@
 import { StrictMode, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { JSONPath } from 'jsonpath-plus';
 import {
   AlertCircle,
   Braces,
@@ -28,6 +29,7 @@ const sampleJson = `{
 }`;
 
 const binaryChunkSize = 0x8000;
+const sampleJsonPath = '$.features[*]';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -381,6 +383,20 @@ function decodeJwt(value: string) {
   return JSON.stringify({ header, payload }, null, 2);
 }
 
+function runJsonPathQuery(json: JsonValue, path: string) {
+  const query = path.trim();
+  if (!query) {
+    throw new Error('Enter a JSONPath query first.');
+  }
+
+  return JSONPath({
+    path: query,
+    json,
+    wrap: true,
+    eval: 'safe'
+  }) as JsonValue[];
+}
+
 function bytes(value: string) {
   return new Blob([value]).size;
 }
@@ -388,6 +404,7 @@ function bytes(value: string) {
 function App() {
   const [input, setInput] = useState(sampleJson);
   const [output, setOutput] = useState(() => JSON.stringify(JSON.parse(sampleJson), null, 2));
+  const [jsonPathQuery, setJsonPathQuery] = useState(sampleJsonPath);
   const [notice, setNotice] = useState('Sample JSON loaded');
 
   const parseResult = useMemo(() => parseJson(input), [input]);
@@ -456,6 +473,22 @@ function App() {
       setNotice('JWT header and payload decoded locally');
     } catch (error) {
       setNotice(error instanceof Error ? `JWT decode failed: ${error.message}` : 'JWT decode failed');
+    }
+  };
+
+  const extractJsonPath = () => {
+    const result = parseJson(input);
+    if (!result.ok) {
+      setNotice(`Invalid JSON: ${formatParseError(result)}`);
+      return;
+    }
+
+    try {
+      const matches = runJsonPathQuery(result.value, jsonPathQuery);
+      setOutput(JSON.stringify(matches, null, 2));
+      setNotice(`JSONPath returned ${matches.length.toLocaleString()} match${matches.length === 1 ? '' : 'es'}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? `JSONPath failed: ${error.message}` : 'JSONPath query failed');
     }
   };
 
@@ -545,6 +578,21 @@ function App() {
       </section>
 
       <section className="workspace" id="tool" aria-label="JSON tool">
+        <div className="query-bar" aria-label="JSONPath query">
+          <label htmlFor="jsonpath-query">JSONPath</label>
+          <input
+            id="jsonpath-query"
+            spellCheck="false"
+            value={jsonPathQuery}
+            onChange={(event) => setJsonPathQuery(event.target.value)}
+            placeholder="$.users[*].email"
+          />
+          <button onClick={extractJsonPath} title="Extract with JSONPath">
+            <Search size={18} />
+            Extract
+          </button>
+        </div>
+
         <div className="toolbar" aria-label="JSON actions">
           <button onClick={() => runJsonAction('format')} title="Format JSON">
             <Sparkles size={18} />
@@ -680,6 +728,11 @@ function App() {
             <p>Catch parse errors early with line and column hints plus counts for keys, objects and depth.</p>
           </article>
           <article>
+            <Search size={22} />
+            <h3>JSONPath extraction</h3>
+            <p>Pull fields, array items or filtered matches from larger API payloads with browser-side JSONPath.</p>
+          </article>
+          <article>
             <Sparkles size={22} />
             <h3>Format and minify</h3>
             <p>Turn pasted payloads into readable JSON or compact output for transport and storage.</p>
@@ -715,6 +768,10 @@ function App() {
           <a href="https://json-schema.org/draft/2020-12" target="_blank" rel="noreferrer">
             <strong>JSON Schema 2020-12</strong>
             <span>The official draft used by the generated schema output.</span>
+          </a>
+          <a href="https://www.rfc-editor.org/rfc/rfc9535.html" target="_blank" rel="noreferrer">
+            <strong>JSONPath RFC 9535</strong>
+            <span>The IETF standard for selecting values from JSON documents.</span>
           </a>
           <a href="https://jwt.io/introduction/" target="_blank" rel="noreferrer">
             <strong>JWT introduction</strong>
@@ -757,6 +814,13 @@ function App() {
           <p>
             Yes. It infers object properties, required fields, arrays, union types and common string formats from
             sample JSON. Treat the result as a practical starting point rather than a complete validation contract.
+          </p>
+        </details>
+        <details>
+          <summary>Can it extract data with JSONPath?</summary>
+          <p>
+            Yes. Enter a JSONPath expression such as <code>$.items[*].id</code> or
+            <code> $.users[?(@.active === true)]</code> and the output will contain the matching values.
           </p>
         </details>
         <details>

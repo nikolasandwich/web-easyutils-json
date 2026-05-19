@@ -18,6 +18,7 @@ body {
 }
 
 button,
+input,
 textarea {
   font: inherit;
 }
@@ -155,6 +156,40 @@ nav a {
 
 .workspace {
   padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
+}
+
+.query-bar {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dce3eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+}
+
+.query-bar label {
+  color: #4d5e6d;
+  font-weight: 800;
+}
+
+.query-bar input {
+  background: #fbfcfe;
+  border: 1px solid #d5dde7;
+  border-radius: 8px;
+  color: #172026;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  min-height: 40px;
+  min-width: 0;
+  outline: none;
+  padding: 0.55rem 0.75rem;
+}
+
+.query-bar input:focus {
+  border-color: #2f7d6f;
+  box-shadow: 0 0 0 3px rgba(47, 125, 111, 0.12);
 }
 
 .toolbar {
@@ -323,6 +358,15 @@ article p,
   line-height: 1.6;
 }
 
+code {
+  background: #edf3f5;
+  border-radius: 6px;
+  color: #172026;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.12rem 0.3rem;
+}
+
 .references {
   background: #f8fafc;
 }
@@ -374,6 +418,7 @@ summary {
 
 @media (max-width: 900px) {
   .hero,
+  .query-bar,
   .editor-grid,
   .diagnostics,
   .feature-grid {
@@ -414,6 +459,11 @@ summary {
   .toolbar button {
     justify-content: center;
     min-width: calc(50% - 0.35rem);
+  }
+
+  .query-bar button {
+    justify-content: center;
+    width: 100%;
   }
 
   textarea {
