@@ -629,10 +629,10 @@ function App() {
             Unescape
           </button>
           <button onClick={() => base64('encode')} title="Encode Base64">
-            B64+
+            Encode B64
           </button>
           <button onClick={() => base64('decode')} title="Decode Base64">
-            B64-
+            Decode B64
           </button>
           <button onClick={decodeJwtInput} title="Decode JWT">
             <KeyRound size={18} />
@@ -653,6 +653,11 @@ function App() {
           <button onClick={loadSample} title="Load sample JSON">
             Sample
           </button>
+        </div>
+
+        <div className="task-guide">
+          <strong>Fast path:</strong> paste JSON, choose Format or Minify, then copy from Output.
+          Use JSONPath, schema, Base64 and JWT actions only when you need a specific conversion.
         </div>
 
         <div className="editor-grid">

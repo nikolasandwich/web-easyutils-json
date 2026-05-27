@@ -199,6 +199,20 @@ nav a {
   margin-bottom: 1rem;
 }
 
+.task-guide {
+  background: #eef6f3;
+  border: 1px solid #cfe4dd;
+  border-radius: 8px;
+  color: #39515c;
+  line-height: 1.6;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.task-guide strong {
+  color: #1f6f61;
+}
+
 .editor-grid {
   display: grid;
   gap: 1rem;
