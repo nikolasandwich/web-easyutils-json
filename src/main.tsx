@@ -30,6 +30,7 @@ const sampleJson = `{
 
 const binaryChunkSize = 0x8000;
 const sampleJsonPath = '$.features[*]';
+const maxJsonPathInputBytes = 500_000;
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -360,7 +361,9 @@ function encodeBase64(value: string) {
 }
 
 function decodeBase64(value: string) {
-  const binary = atob(value);
+  const normalized = value.trim().replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  const binary = atob(padded);
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
@@ -387,6 +390,9 @@ function runJsonPathQuery(json: JsonValue, path: string) {
   const query = path.trim();
   if (!query) {
     throw new Error('Enter a JSONPath query first.');
+  }
+  if (bytes(JSON.stringify(json)) > maxJsonPathInputBytes) {
+    throw new Error('JSONPath is limited to 500 KB of JSON in this browser tool. Split the input and try again.');
   }
 
   return JSONPath({
@@ -470,7 +476,7 @@ function App() {
   const decodeJwtInput = () => {
     try {
       setOutput(decodeJwt(input));
-      setNotice('JWT header and payload decoded locally');
+      setNotice('JWT header and payload decoded locally. Signature is not verified.');
     } catch (error) {
       setNotice(error instanceof Error ? `JWT decode failed: ${error.message}` : 'JWT decode failed');
     }
