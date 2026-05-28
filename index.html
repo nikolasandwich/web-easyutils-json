@@ -29,6 +29,22 @@
       content="Format, validate, minify and convert JSON instantly in your browser."
     />
     <meta name="twitter:image" content="https://json.easyutils.org/og-image.svg" />
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S2HFKY9612"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-S2HFKY9612");
+      window.trackEasyUtilsEvent = function (name, properties) {
+        if (typeof window.gtag === "function") {
+          window.gtag("event", name, properties || {});
+        }
+      };
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
